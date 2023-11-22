@@ -22,13 +22,14 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
             steps{
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
+                        sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
                         docker_image = docker.build "${IMAGE_NAME}"
                     }
                 }
@@ -36,6 +37,7 @@ pipeline{
         }
     }
 }
+
 ```
 ## 2. Trivy File Scan Pipeline
 ![ScanGifScanningGIF (2)](https://github.com/Fir3eye/Pipeline/assets/93431222/bbaef868-172e-4a60-b6bf-242501acf3b2)
@@ -60,13 +62,14 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
             steps{
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
+			sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
                         docker_image = docker.build "${IMAGE_NAME}"
                     }
                 }
@@ -75,12 +78,13 @@ pipeline{
         stage("Trivy Scan") {
             steps {
                 script {
-		   sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image dmancloud/complete-prodcution-e2e-pipeline:1.0.0-22 --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+                    sh "trivy image ${docker_image.id} > trivy.txt"
                 }
             }
         }
     }
 }
+
 ```
 ## 3. Push Image on Docker Hub Pipeline
 ![PushGuhanGuhanAmittGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/d71ddf5a-906b-42ad-b892-4d72112b025d)
@@ -105,13 +109,14 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
             steps{
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
+			sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
                         docker_image = docker.build "${IMAGE_NAME}"
                     }
                 }
@@ -120,19 +125,23 @@ pipeline{
         stage("Trivy Scan") {
             steps {
                 script {
-		   sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image dmancloud/complete-prodcution-e2e-pipeline:1.0.0-22 --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+                    sh "trivy image ${docker_image.id} > trivy.txt"
                 }
             }
         }
-        stage("Push the Image on DockerHub"){
-            docker.withRegistry('',DOCKER_PASS){
-                docker_image.push("${IMAGE_TAG}")
-                docker_image.push('latest')
-
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
             }
-        }                        
+        }                     
     }
 }
+
 ```
 ## 4. Clean Artifact Delete Docker image and Container Pipeline
 ![CleanCleaningGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/948670f6-627e-400b-9cf6-dea6d8f95328)
@@ -157,7 +166,7 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
@@ -172,15 +181,18 @@ pipeline{
         stage("Trivy Scan") {
             steps {
                 script {
-		   sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image dmancloud/complete-prodcution-e2e-pipeline:1.0.0-22 --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+                    sh "trivy image ${docker_image.id} > trivy.txt"
                 }
             }
         }
-        stage("Push the Image on DockerHub"){
-            docker.withRegistry('',DOCKER_PASS){
-                docker_image.push("${IMAGE_TAG}")
-                docker_image.push('latest')
-
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
             }
         }
         stage ('Cleanup Artifacts') {
@@ -193,6 +205,8 @@ pipeline{
         }
     }
 }
+
+
 
 ```
 ## 5. SonarQube Analysis Pipeline 
@@ -218,7 +232,7 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
@@ -233,15 +247,18 @@ pipeline{
         stage("Trivy Scan") {
             steps {
                 script {
-		   sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image dmancloud/complete-prodcution-e2e-pipeline:1.0.0-22 --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+                    sh "trivy image ${docker_image.id} > trivy.txt"
                 }
             }
         }
-        stage("Push the Image on DockerHub"){
-            docker.withRegistry('',DOCKER_PASS){
-                docker_image.push("${IMAGE_TAG}")
-                docker_image.push('latest')
-
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
             }
         }
 
@@ -264,6 +281,7 @@ pipeline{
         }
     }
 }
+
 ```
 ## 6. Quality Gate Pipeline 
 ![AutomaticGateBenincaGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/d188737b-6fac-4f99-ac00-424519d79cf5)
@@ -288,7 +306,7 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
@@ -303,15 +321,18 @@ pipeline{
         stage("Trivy Scan") {
             steps {
                 script {
-		   sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image dmancloud/complete-prodcution-e2e-pipeline:1.0.0-22 --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+                    sh "trivy image ${docker_image.id} > trivy.txt"
                 }
             }
         }
-        stage("Push the Image on DockerHub"){
-            docker.withRegistry('',DOCKER_PASS){
-                docker_image.push("${IMAGE_TAG}")
-                docker_image.push('latest')
-
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
             }
         }
         stage ('Cleanup Artifacts') {
@@ -340,4 +361,5 @@ pipeline{
         }
     }
 }
+
 ```
