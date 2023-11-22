@@ -17,7 +17,7 @@ pipeline{
         }
         stage("Checkout from SCM"){
             steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/dmancloud/complete-prodcution-e2e-pipeline'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
             }
         }
         stage("Build Docker Image"){
