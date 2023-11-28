@@ -61,5 +61,28 @@ pipeline{
                 }
             }
         }
+        stage("Trivy Scan") {
+            steps {
+                script {
+                    sh "trivy image ${docker_image.id} > trivy.txt"
+                }
+            }
+        }
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
+            }
+        } 
+        stage ('Deploy to Container') {
+            steps {
+                sh 'docker run -d --name pet1 -p 8082:8080 fir3eye/image_name:latest'
+            }
+        }
     }
 }
+

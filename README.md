@@ -1,7 +1,254 @@
 # Basic To Advanced Pipeline 
-## 1. Build the Image Pipeline👷‍♂️
-![WorkPenguinGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/4ea5688e-0dbc-4246-aec0-d34038cd3687)
 
+## Clean WorkSpace
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+    }
+}
+```
+
+## 1. Checkout_SCM
+
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+    }
+}
+```
+## 2. Maven Build
+
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+    }
+}
+```
+## 3. SonarQube Analysis
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+    }
+}
+```
+## 4. OWASP DP-Check
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+    }
+}
+```
+## 5. Quality Gate
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+    }
+}
+```
+## 6. Build war file
+```
+pipeline {
+    agent any 
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+        stage ('Build war file'){
+             steps{
+                 sh 'mvn clean install package'
+             }
+        }
+    }
+}
+```
+## 7. Build Docker Image
 ```
 pipeline{
     agent any
@@ -15,15 +262,46 @@ pipeline{
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}" 
     }
     stages{
-        stage("Cleanup Workspace"){
-            steps{
+        stage("Clean WorkSpace"){
+            steps {
                 cleanWs()
             }
         }
-        stage("Checkout from SCM"){
-            steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
             }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+        stage ('Build war file'){
+             steps{
+                 sh 'mvn clean install package'
+             }
         }
         stage("Build Docker Image"){
             steps{
@@ -39,9 +317,7 @@ pipeline{
 }
 
 ```
-## 2. Trivy File Scan Pipeline
-![ScanGifScanningGIF (2)](https://github.com/Fir3eye/Pipeline/assets/93431222/bbaef868-172e-4a60-b6bf-242501acf3b2)
-
+## 8. Trivy File Scan
 ```
 pipeline{
     agent any
@@ -55,21 +331,52 @@ pipeline{
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}" 
     }
     stages{
-        stage("Cleanup Workspace"){
-            steps{
+        stage("Clean WorkSpace"){
+            steps {
                 cleanWs()
             }
         }
-        stage("Checkout from SCM"){
-            steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
             }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+        stage ('Build war file'){
+             steps{
+                 sh 'mvn clean install package'
+             }
         }
         stage("Build Docker Image"){
             steps{
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
-			sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
+                        sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
                         docker_image = docker.build "${IMAGE_NAME}"
                     }
                 }
@@ -81,14 +388,12 @@ pipeline{
                     sh "trivy image ${docker_image.id} > trivy.txt"
                 }
             }
-        }
+        }                   
     }
 }
 
 ```
-## 3. Push Image on Docker Hub Pipeline
-![PushGuhanGuhanAmittGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/d71ddf5a-906b-42ad-b892-4d72112b025d)
-
+## 9. Push Image on Docker
 ```
 pipeline{
     agent any
@@ -102,21 +407,52 @@ pipeline{
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}" 
     }
     stages{
-        stage("Cleanup Workspace"){
-            steps{
+        stage("Clean WorkSpace"){
+            steps {
                 cleanWs()
             }
         }
-        stage("Checkout from SCM"){
-            steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
             }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+        stage ('Build war file'){
+             steps{
+                 sh 'mvn clean install package'
+             }
         }
         stage("Build Docker Image"){
             steps{
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
-			sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
+                        sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
                         docker_image = docker.build "${IMAGE_NAME}"
                     }
                 }
@@ -143,9 +479,7 @@ pipeline{
 }
 
 ```
-## 4. Clean Artifact Delete Docker image and Container Pipeline
-![CleanCleaningGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/948670f6-627e-400b-9cf6-dea6d8f95328)
-
+## 10. Deploy on Docker
 ```
 pipeline{
     agent any
@@ -159,20 +493,52 @@ pipeline{
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}" 
     }
     stages{
-        stage("Cleanup Workspace"){
-            steps{
+        stage("Clean WorkSpace"){
+            steps {
                 cleanWs()
             }
         }
-        stage("Checkout from SCM"){
-            steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
             }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+        stage ('Build war file'){
+             steps{
+                 sh 'mvn clean install package'
+             }
         }
         stage("Build Docker Image"){
             steps{
                 script {
                     docker.withRegistry('',DOCKER_PASS) {
+                        sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
                         docker_image = docker.build "${IMAGE_NAME}"
                     }
                 }
@@ -194,102 +560,117 @@ pipeline{
                     }
                 }
             }
-        }
-        stage ('Cleanup Artifacts') {
+        } 
+        stage ('Deploy to Container') {
             steps {
-                script {
-                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker rmi ${IMAGE_NAME}:latest"
-                }
-            }
-        }
-    }
-}
-
-
-
-```
-## 5. SonarQube Analysis Pipeline 
-![KowalskiAnalysisKowalskiGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/9b648b32-7e8c-4a15-8d76-f45b71c244e7)
-
-```
-pipeline{
-    agent any
-
-    environment {
-        APP_NAME = "image_name"
-        RELEASE = "latest"
-        DOCKER_USER = "fir3eye"
-        DOCKER_PASS = 'dockerhub'
-        IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
-        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}" 
-    }
-    stages{
-        stage("Cleanup Workspace"){
-            steps{
-                cleanWs()
-            }
-        }
-        stage("Checkout from SCM"){
-            steps{
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/Fir3eye/pr_01_docker_push_img.git'
-            }
-        }
-        stage("Build Docker Image"){
-            steps{
-                script {
-                    docker.withRegistry('',DOCKER_PASS) {
-                        docker_image = docker.build "${IMAGE_NAME}"
-                    }
-                }
-            }
-        }
-        stage("Trivy Scan") {
-            steps {
-                script {
-                    sh "trivy image ${docker_image.id} > trivy.txt"
-                }
-            }
-        }
-        stage("Push Docker Image"){
-            steps{
-                script {
-                    docker.withRegistry('',DOCKER_PASS){
-                        docker_image.push("${IMAGE_TAG}")
-                        docker_image.push('latest')
-                    }
-                }
-            }
-        }
-
-        stage ('Cleanup Artifacts') {
-            steps {
-                script {
-                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
-                    sh "docker rmi ${IMAGE_NAME}:latest"
-                }
-            }
-        }
-        stage("Sonarqube Analysis") {
-            steps {
-                script {
-                    withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
-                        sh "mvn sonar:sonar"
-                    }
-                }
+                sh 'docker run -d --name pet1 -p 8082:8080 fir3eye/image_name:latest'
             }
         }
     }
 }
 
 ```
-## 6. Quality Gate Pipeline 
-![AutomaticGateBenincaGIF](https://github.com/Fir3eye/Pipeline/assets/93431222/d188737b-6fac-4f99-ac00-424519d79cf5)
 
+## 11. Clean Artifactory
 ```
 pipeline{
     agent any
 
+    environment {
+        APP_NAME = "image_name"
+        RELEASE = "latest"
+        DOCKER_USER = "fir3eye"
+        DOCKER_PASS = 'dockerhub'
+        IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
+        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}" 
+    }
+    stages{
+        stage("Clean WorkSpace"){
+            steps {
+                cleanWs()
+            }
+        }
+        stage("Checkout SCM"){
+            steps {
+                git 'https://github.com/Fir3eye/pr_03_amazon-eks-jenkins-terraform.git'
+            }
+        }
+        stage("Maven Compile"){
+            steps {
+                sh 'mvn clean compile'
+            }
+        }
+        stage("SonarQube Analysis"){
+            steps{
+                script{
+                    withSonarQubeEnv(credentialsId: 'sonar-token') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+        stage("OWASP Dependency Check"){
+             steps{
+                 dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP-Check'
+                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+             }
+        }
+        stage("Quality Gate") {
+            steps {
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
+            }
+        }
+        stage ('Build war file'){
+             steps{
+                 sh 'mvn clean install package'
+             }
+        }
+        stage("Build Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS) {
+                        sh "docker images --format '{{.Repository}}:{{.Tag}}' | grep ${IMAGE_NAME} | grep -v ${RELEASE}-${BUILD_NUMBER} | grep -v latest | xargs -I {} docker rmi {} || true" 
+                        docker_image = docker.build "${IMAGE_NAME}"
+                    }
+                }
+            }
+        }
+        stage("Trivy Scan") {
+            steps {
+                script {
+                    sh "trivy image ${docker_image.id} > trivy.txt"
+                }
+            }
+        }
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
+            }
+        } 
+        stage ('Deploy to Container') {
+            steps {
+                sh 'docker run -d --name pet1 -p 8082:8080 fir3eye/image_name:latest'
+            }
+        }
+    }
+}
+
+
+```
+## Environment
+```
+pipeline{
+    agent any
+    tools {
+        jdk 'jdk11'
+        maven 'maven3'
+    }
     environment {
         APP_NAME = "image_name"
         RELEASE = "latest"
@@ -335,6 +716,7 @@ pipeline{
                 }
             }
         }
+
         stage ('Cleanup Artifacts') {
             steps {
                 script {
@@ -354,9 +736,8 @@ pipeline{
         }
         stage("Quality Gate") {
             steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonarqube-token'
-                }
+                waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token' 
+
             }
         }
     }

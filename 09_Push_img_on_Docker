@@ -61,5 +61,22 @@ pipeline{
                 }
             }
         }
+        stage("Trivy Scan") {
+            steps {
+                script {
+                    sh "trivy image ${docker_image.id} > trivy.txt"
+                }
+            }
+        }
+        stage("Push Docker Image"){
+            steps{
+                script {
+                    docker.withRegistry('',DOCKER_PASS){
+                        docker_image.push("${IMAGE_TAG}")
+                        docker_image.push('latest')
+                    }
+                }
+            }
+        }                     
     }
 }
